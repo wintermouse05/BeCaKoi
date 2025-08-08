@@ -73,7 +73,9 @@
     const json = JSON.parse(event.data);
     console.log('Realtime:', json);
 
-    labels.push(json.timestamp);
+    // Chỉ hiển thị ngày, bỏ giờ
+    const dateOnly = json.timestamp.split(' ')[0] || json.timestamp.split('T')[0];
+    labels.push(dateOnly);
     tempData.push(json.temperature);
     turbData.push(json.turbidity);
 
@@ -115,7 +117,9 @@
             turbData.length = 0;
 
             data.forEach(d => {
-            labels.push(d.timestamp);
+            // Chỉ hiển thị ngày, bỏ giờ
+            const dateOnly = d.timestamp.split(' ')[0] || d.timestamp.split('T')[0];
+            labels.push(dateOnly);
             tempData.push(d.temperature);
             turbData.push(d.turbidity);
             });
