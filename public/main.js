@@ -1,4 +1,4 @@
-const socket = new WebSocket('ws://localhost:3000');
+const socket = new WebSocket('ws://localhost:5000');
 const labels = [];
 const temps = [];
 const turbs = [];

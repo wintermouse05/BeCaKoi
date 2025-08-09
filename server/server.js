@@ -3,7 +3,7 @@ const cors = require('cors');
 
 const http = require('http');
 const { setupWebSocket } = require('./websocket');
-const { setupMQTT } = require('./mqttHandler');
+const { setupMQTT, setupControlMQTT, sendControlSignal, sendControlSignalAsync } = require('./mqttHandler');
 const { db, ref, get, query, orderByChild, startAt, endAt } = require('./firebase');
 
 const app = express();
@@ -15,6 +15,7 @@ setupMQTT(wsClients);
 // CORS phải đặt trước các route
 app.use(cors());
 app.use(express.static('public'));
+app.use(express.json()); // Thêm middleware để parse JSON
 
 app.get('/data_sensor', async (req, res) => {
     try {
@@ -53,4 +54,61 @@ app.get('/data_sensor', async (req, res) => {
     }
 });
 
-server.listen(3000, () => console.log('Server on http://localhost:3000'));
+// API endpoint để nhận tín hiệu điều khiển từ front-end
+app.post('/api/control', async (req, res) => {
+    try {
+        const { state, timestamp, source } = req.body;
+        
+        console.log(`📨 Control signal received from ${source}: state=${state}`);
+        
+        // Phương pháp 1: Sử dụng async/await
+        try {
+            const result = await sendControlSignalAsync(state);
+            res.json({ 
+                success: true, 
+                message: `Device ${state ? 'turned ON' : 'turned OFF'}`,
+                state: state,
+                timestamp: timestamp,
+                mqtt_result: result
+            });
+        } catch (mqttError) {
+            console.error('MQTT sending failed:', mqttError);
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to send control signal via MQTT',
+                error: mqttError.message
+            });
+        }
+        
+        // Phương pháp 2: Sử dụng callback (comment out vì đã dùng async)
+        /*
+        sendControlSignal(state, (success, result) => {
+            if (success) {
+                res.json({ 
+                    success: true, 
+                    message: `Device ${state ? 'turned ON' : 'turned OFF'}`,
+                    state: state,
+                    timestamp: timestamp,
+                    mqtt_result: result
+                });
+            } else {
+                res.status(500).json({ 
+                    success: false, 
+                    message: 'Failed to send control signal via MQTT',
+                    error: result
+                });
+            }
+        });
+        */
+        
+    } catch (error) {
+        console.error('Error handling control signal:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+});
+
+server.listen(5000, () => console.log('Server on http://localhost:5000'));

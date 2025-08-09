@@ -6,7 +6,34 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
     body { font-family: sans-serif; margin: 20px; }
-    .controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    
+    /* CSS cho button điều khiển */
+    #controlBtn {
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    #controlBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    
+    #controlBtn.on {
+        background-color: #f44336;
+    }
+    
+    #controlBtn.off {
+        background-color: #4CAF50;
+    }
+    
+    .status-on {
+        color: #f44336 !important;
+    }
+    
+    .status-off {
+        color: #4CAF50 !important;
+    }
     </style>
 </head>
 <body>
@@ -17,6 +44,15 @@
         <label>Đến: <input type="date" id="to-date"></label>
         <button onclick="loadHistory()">Lọc dữ liệu</button>
         <button onclick="enableRealtime()">Chế độ thời gian thực</button>
+        
+        <!-- Button điều khiển MQTT -->
+        <div style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 20px;">
+            <label>Điều khiển thiết bị:</label>
+            <button id="controlBtn" onclick="toggleDevice()" style="padding: 10px 20px; font-size: 16px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                BẬT THIẾT BỊ
+            </button>
+            <span id="statusText" style="margin-left: 10px; font-weight: bold; color: #4CAF50;">THIẾT BỊ: TẮT</span>
+        </div>
     </div>
 
     <canvas id="myChart" width="600" height="300"></canvas>
@@ -64,7 +100,7 @@
     });
 
     // 📡 Nhận dữ liệu thời gian thực qua WebSocket
-    const socket = new WebSocket('ws://localhost:3000');
+    const socket = new WebSocket('ws://localhost:5000');
     let isRealtimeMode = true; // Biến để kiểm soát chế độ realtime
 
     socket.onmessage = (event) => {
@@ -102,7 +138,7 @@
         isRealtimeMode = false;
 
         try {
-            const response = await fetch(`http://localhost:3000/data_sensor?from=${from}&to=${to}`);
+            const response = await fetch(`http://localhost:5000/data_sensor?from=${from}&to=${to}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -174,6 +210,65 @@
         document.getElementById('to-date').value = formatDate(today);
         document.getElementById('from-date').value = formatDate(yesterday);
     };
+
+    // JavaScript cho button điều khiển MQTT
+    let deviceState = false; // false = tắt, true = bật
+    
+    function toggleDevice() {
+        deviceState = !deviceState;
+        
+        // Gửi tín hiệu điều khiển đến server
+        sendControlSignal(deviceState ? 1 : 0);
+        
+        // Cập nhật giao diện
+        updateButtonUI();
+    }
+    
+    function sendControlSignal(state) {
+        fetch('/api/control', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                state: state,
+                timestamp: Date.now(),
+                source: 'web_interface'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Control signal sent successfully:', data);
+        })
+        .catch(error => {
+            console.error('Error sending control signal:', error);
+            alert('Lỗi khi gửi tín hiệu điều khiển!');
+            // Hoàn tác trạng thái nếu có lỗi
+            deviceState = !deviceState;
+            updateButtonUI();
+        });
+    }
+    
+    function updateButtonUI() {
+        const btn = document.getElementById('controlBtn');
+        const status = document.getElementById('statusText');
+        
+        if (deviceState) {
+            // Thiết bị đang bật
+            btn.innerHTML = 'TẮT THIẾT BỊ';
+            btn.className = 'on';
+            btn.style.backgroundColor = '#f44336';
+            status.innerHTML = 'THIẾT BỊ: BẬT';
+            status.className = 'status-on';
+        } else {
+            // Thiết bị đang tắt
+            btn.innerHTML = 'BẬT THIẾT BỊ';
+            btn.className = 'off';
+            btn.style.backgroundColor = '#4CAF50';
+            status.innerHTML = 'THIẾT BỊ: TẮT';
+            status.className = 'status-off';
+        }
+    }
 </script>
 </body>
 </html>
