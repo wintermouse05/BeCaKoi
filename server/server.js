@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const http = require('http');
 const { setupWebSocket } = require('./websocket');
@@ -14,8 +15,31 @@ setupMQTT(wsClients);
 
 // CORS phải đặt trước các route
 app.use(cors());
-app.use(express.static('public'));
 app.use(express.json()); // Thêm middleware để parse JSON
+
+// Serve static files từ thư mục public (Frontend)
+app.use(express.static('../public'));
+
+// Route chính để serve frontend
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// API info endpoint
+app.get('/api', (req, res) => {
+    res.json({
+        name: 'TraiCa IoT System API',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: {
+            'GET /': 'Frontend dashboard',
+            'GET /data_sensor': 'Get sensor data with date range',
+            'POST /api/control': 'Send control signals to devices',
+            'GET /api': 'This API information'
+        },
+        timestamp: new Date().toISOString()
+    });
+});
 
 app.get('/data_sensor', async (req, res) => {
     try {
@@ -111,4 +135,13 @@ app.post('/api/control', async (req, res) => {
     }
 });
 
-server.listen(5000, () => console.log('Server on http://localhost:5000'));
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📱 Frontend available at http://localhost:${PORT}`);
+    console.log(`🔌 WebSocket available at ws://localhost:${PORT}`);
+    console.log(`📡 API endpoints:`);
+    console.log(`   - GET  /data_sensor`);
+    console.log(`   - POST /api/control`);
+});

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Biểu đồ dữ liệu nước</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
     <style>
     body { font-family: sans-serif; margin: 20px; }
     .controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -100,7 +101,7 @@
     });
 
     // 📡 Nhận dữ liệu thời gian thực qua WebSocket
-    const socket = new WebSocket('ws://localhost:5000');
+    const socket = new WebSocket(`ws://${window.location.host}`);
     let isRealtimeMode = true; // Biến để kiểm soát chế độ realtime
 
     socket.onmessage = (event) => {
@@ -138,7 +139,7 @@
         isRealtimeMode = false;
 
         try {
-            const response = await fetch(`http://localhost:5000/data_sensor?from=${from}&to=${to}`);
+            const response = await fetch(`/data_sensor?from=${from}&to=${to}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
